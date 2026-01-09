@@ -49,14 +49,30 @@
         <div class="grid gap-4 md:grid-cols-3">
           <!-- Chart -->
           <div class="md:col-span-2 space-y-2">
-            <div class="flex items-center justify-between text-xs text-slate-400">
-              <span>Price – last 90 days</span>
-            </div>
-            <ClientOnly>
-              <PriceChart :points="asset.history" />
-            </ClientOnly>
+  <div class="flex items-center justify-between text-xs text-slate-400">
+    <span>
+      Price – {{ rangeLabel }}
+    </span>
+    <div class="inline-flex gap-1 rounded-full border border-white/15 bg-slate-900/70 p-0.5">
+      <button
+        v-for="opt in rangeOptions"
+        :key="opt.value"
+        type="button"
+        class="rounded-full px-2 py-0.5 text-[11px] transition"
+        :class="range === opt.value
+          ? 'bg-emerald-500/20 text-emerald-200'
+          : 'text-slate-300 hover:bg-white/5'"
+        @click="range = opt.value"
+      >
+        {{ opt.label }}
+      </button>
+    </div>
+  </div>
+  <ClientOnly>
+    <PriceChart :points="displayPoints" />
+  </ClientOnly>
+</div>
 
-          </div>
 
           <!-- Metrics -->
           <div class="space-y-3 rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-xs">
@@ -169,6 +185,51 @@ const id = computed(() => String(route.params.id))
 const { data, pending, error } = await useFetch<AssetDetail>(`/api/assets/${id.value}`)
 
 const asset = computed(() => data.value ?? null)
+
+type RangeValue = '7D' | '1M' | '3M' | '6M'
+
+const range = ref<RangeValue>('3M')
+
+const rangeOptions: { value: RangeValue; label: string }[] = [
+  { value: '7D', label: '7D' },
+  { value: '1M', label: '1M' },
+  { value: '3M', label: '3M' },
+  { value: '6M', label: '6M' }
+]
+
+const rangeLabel = computed(() => {
+  switch (range.value) {
+    case '7D':
+      return 'last 7 days'
+    case '1M':
+      return 'last 30 days'
+    case '3M':
+      return 'last 90 days'
+    case '6M':
+      return 'last 180 days'
+  }
+})
+
+const displayPoints = computed<PricePoint[]>(() => {
+  if (!asset.value) return []
+
+  const all = asset.value.history ?? []
+  if (!all.length) return []
+
+  const daysMap: Record<RangeValue, number> = {
+    '7D': 7,
+    '1M': 30,
+    '3M': 90,
+    '6M': 180
+  }
+
+  const days = daysMap[range.value]
+  if (all.length <= days) {
+    return all
+  }
+  // devolvemos los últimos "days" puntos
+  return all.slice(all.length - days)
+})
 
 const errorMessage = computed(() => {
   if (!error.value) return ''

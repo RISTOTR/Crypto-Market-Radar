@@ -64,10 +64,10 @@ export default defineEventHandler<AssetDetail>(async (event) => {
 
   const usd = ticker.quotes.USD
 
-  // 2) Histórico últimos 90 días
+  // 2) Histórico últimos 180 días (para poder mostrar 7D / 1M / 3M / 6M)
   const now = new Date()
   const start = new Date()
-  start.setDate(now.getDate() - 90)
+  start.setDate(now.getDate() - 180)
 
   const startStr = start.toISOString().slice(0, 10)
   const endStr = now.toISOString().slice(0, 10)
@@ -79,10 +79,11 @@ export default defineEventHandler<AssetDetail>(async (event) => {
         start: startStr,
         end: endStr,
         interval: '1d',
-        limit: 90
+        limit: 180
       }
     }
   )
+
 
   const history: PricePoint[] = (historyRaw || []).map((row) => ({
     time: Math.floor(new Date(row.timestamp).getTime() / 1000),
