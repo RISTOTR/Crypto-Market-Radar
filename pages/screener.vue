@@ -20,53 +20,36 @@
         <!-- Search -->
         <div class="flex flex-col gap-1">
           <label class="text-slate-300">Search</label>
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Symbol or name…"
-            class="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70"
-          />
+          <input v-model="search" type="text" placeholder="Symbol or name…"
+            class="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70" />
         </div>
 
         <!-- Min market cap -->
         <div class="flex flex-col gap-1">
           <label class="text-slate-300">Min market cap (M)</label>
-          <input
-            v-model.number="minMarketCapM"
-            type="number"
-            min="0"
-            class="w-28 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70"
-          />
+          <input v-model.number="minMarketCapM" type="number" min="0"
+            class="w-28 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70" />
         </div>
 
         <!-- Min volume -->
         <div class="flex flex-col gap-1">
           <label class="text-slate-300">Min volume 24h (M)</label>
-          <input
-            v-model.number="minVolumeM"
-            type="number"
-            min="0"
-            class="w-28 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70"
-          />
+          <input v-model.number="minVolumeM" type="number" min="0"
+            class="w-28 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70" />
         </div>
 
         <!-- Min change 24h -->
         <div class="flex flex-col gap-1">
           <label class="text-slate-300">Min change 24h (%)</label>
-          <input
-            v-model.number="minChange24h"
-            type="number"
-            class="w-24 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70"
-          />
+          <input v-model.number="minChange24h" type="number"
+            class="w-24 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70" />
         </div>
 
         <!-- Sort -->
         <div class="flex flex-col gap-1">
           <label class="text-slate-300">Sort by</label>
-          <select
-            v-model="sortBy"
-            class="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70"
-          >
+          <select v-model="sortBy"
+            class="rounded-lg border border-white/10 bg-slate-900/70 px-3 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-emerald-400/70">
             <option value="marketCap">Market cap</option>
             <option value="volume24h">Volume 24h</option>
             <option value="change24h">% change 24h</option>
@@ -76,23 +59,32 @@
           </select>
         </div>
 
-        <button
-          type="button"
+        <button type="button"
           class="inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-white/10"
-          @click="toggleSortDir"
-        >
+          @click="toggleSortDir">
           <span>Direction</span>
           <span class="text-emerald-300">
             {{ sortDir === 'desc' ? '↓ Desc' : '↑ Asc' }}
           </span>
         </button>
 
+        <button type="button"
+          class="inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1.5 text-[11px] transition"
+          :class="onlyFavorites ? 'bg-emerald-500/20 text-emerald-200' : 'text-slate-200 hover:bg-white/10'"
+          @click="onlyFavorites = !onlyFavorites">
+          <span v-if="onlyFavorites">★ Only favorites</span>
+          <span v-else>☆ Only favorites</span>
+          <span v-if="favorites.length" class="text-[10px] text-slate-400 ml-1">
+            ({{ favorites.length }})
+          </span>
+
+        </button>
+
+
         <!-- Reset -->
-        <button
-          type="button"
+        <button type="button"
           class="ml-auto inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-white/10"
-          @click="resetFilters"
-        >
+          @click="resetFilters">
           Reset filters
         </button>
       </div>
@@ -118,9 +110,15 @@
 
       <div v-else>
         <div class="overflow-x-auto">
+          <div class="text-[10px] text-slate-500 mb-1">
+            <span v-if="sparkPending">Loading trend mini-charts…</span>
+            <span v-else-if="sparkError">{{ sparkError }}</span>
+          </div>
+
           <table class="min-w-full text-left text-xs">
             <thead class="border-b border-white/10 text-[10px] uppercase tracking-wide text-slate-400">
               <tr>
+                <th class="py-2 pr-2 text-center w-6">★</th>
                 <th class="py-2 pr-3">#</th>
                 <th class="py-2 pr-3">Asset</th>
                 <th class="py-2 pr-3 text-right">Price</th>
@@ -129,22 +127,27 @@
                 <th class="hidden py-2 pr-3 text-right md:table-cell">% 7d</th>
                 <th class="hidden py-2 pr-3 text-right sm:table-cell">Mkt Cap</th>
                 <th class="hidden py-2 pl-3 text-right sm:table-cell">Vol 24h</th>
+                <th class="py-2 pl-3 text-right hidden md:table-cell">Trend</th>
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="asset in filteredAssets"
-                :key="asset.id"
-                class="border-b border-white/5 hover:bg-white/5"
-              >
+              <tr v-for="asset in filteredAssets" :key="asset.id" class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-2 text-center text-[11px]">
+                  <button type="button" class="transition" @click.stop="toggleFavorite(asset.id)">
+                    <span v-if="isFavorite(asset.id)" class="text-emerald-300">
+                      ★
+                    </span>
+                    <span v-else class="text-slate-500 hover:text-slate-300">
+                      ☆
+                    </span>
+                  </button>
+                </td>
+
                 <td class="py-2 pr-3 text-[11px] text-slate-400">
                   {{ asset.rank }}
                 </td>
                 <td class="py-2 pr-3 text-[11px]">
-                  <NuxtLink
-                    :to="`/asset/${asset.id}`"
-                    class="font-medium text-slate-100 hover:underline"
-                  >
+                  <NuxtLink :to="`/asset/${asset.id}`" class="font-medium text-slate-100 hover:underline">
                     {{ asset.symbol }}
                   </NuxtLink>
                   <span class="ml-1 text-slate-400">
@@ -154,22 +157,13 @@
                 <td class="py-2 pr-3 text-right text-[11px]">
                   {{ formatCurrency(asset.price) }}
                 </td>
-                <td
-                  class="py-2 pr-3 text-right text-[11px]"
-                  :class="changeClass(asset.change1h)"
-                >
+                <td class="py-2 pr-3 text-right text-[11px]" :class="changeClass(asset.change1h)">
                   {{ formatPercent(asset.change1h) }}
                 </td>
-                <td
-                  class="py-2 pr-3 text-right text-[11px]"
-                  :class="changeClass(asset.change24h)"
-                >
+                <td class="py-2 pr-3 text-right text-[11px]" :class="changeClass(asset.change24h)">
                   {{ formatPercent(asset.change24h) }}
                 </td>
-                <td
-                  class="hidden py-2 pr-3 text-right text-[11px] md:table-cell"
-                  :class="changeClass(asset.change7d)"
-                >
+                <td class="hidden py-2 pr-3 text-right text-[11px] md:table-cell" :class="changeClass(asset.change7d)">
                   {{ formatPercent(asset.change7d) }}
                 </td>
                 <td class="hidden py-2 pr-3 text-right text-[11px] sm:table-cell">
@@ -178,15 +172,17 @@
                 <td class="hidden py-2 pl-3 text-right text-[11px] sm:table-cell">
                   {{ formatCompact(asset.volume24h) }}
                 </td>
+                <td class="hidden py-2 pl-3 text-right text-[11px] md:table-cell">
+                  <MiniSparkline :points="sparklineMap[asset.id] ?? []" />
+                </td>
+
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div
-          v-if="filteredAssets.length === 0"
-          class="mt-4 rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-4 py-3 text-[11px] text-slate-300"
-        >
+        <div v-if="filteredAssets.length === 0"
+          class="mt-4 rounded-xl border border-dashed border-white/10 bg-slate-900/40 px-4 py-3 text-[11px] text-slate-300">
           No assets match the current filters. Try lowering the thresholds or clearing the
           search.
         </div>
@@ -196,6 +192,8 @@
 </template>
 
 <script setup lang="ts">
+import MiniSparkline from '~/components/charts/MiniSparkline.vue'
+
 type AssetSummary = {
   id: string
   name: string
@@ -209,12 +207,51 @@ type AssetSummary = {
   change7d: number
 }
 
+type SparkPoint = {
+  time: number
+  value: number
+}
+
+const sparklineMap = ref<Record<string, SparkPoint[]>>({})
+const sparkPending = ref(false)
+const sparkError = ref<string | null>(null)
+
 const { data, pending, error } = await useFetch<AssetSummary[]>('/api/assets/list', {
   query: { limit: 200 } // pedimos más que en el dashboard
 })
 
 const rawAssets = computed(() => data.value ?? [])
 const rawCount = computed(() => rawAssets.value.length)
+
+watch(
+  () => rawAssets.value,
+  async (assets) => {
+    if (!assets || !assets.length) return
+
+    const ids = assets.map((a) => a.id).join(',')
+    sparkPending.value = true
+    sparkError.value = null
+    try {
+      const res = await $fetch<{ id: string; points: SparkPoint[] }[]>('/api/assets/sparkline', {
+        params: {
+          ids,
+          days: 30
+        }
+      })
+      const map: Record<string, SparkPoint[]> = {}
+      for (const s of res) {
+        map[s.id] = s.points
+      }
+      sparklineMap.value = map
+    } catch (e) {
+      console.error(e)
+      sparkError.value = 'Failed to load sparklines.'
+    } finally {
+      sparkPending.value = false
+    }
+  },
+  { immediate: true }
+)
 
 // Filters
 const search = ref('')
@@ -225,6 +262,11 @@ const minChange24h = ref<number | null>(null)
 // Sorting
 const sortBy = ref<'marketCap' | 'volume24h' | 'change24h' | 'change7d' | 'price' | 'rank'>('marketCap')
 const sortDir = ref<'asc' | 'desc'>('desc')
+
+//  Favorites
+const { favorites, isFavorite, toggleFavorite } = useFavorites()
+const onlyFavorites = ref(false)
+
 
 const errorMessage = computed(() => {
   if (!error.value) return ''
@@ -292,6 +334,10 @@ const filteredAssets = computed(() => {
     result = result.filter((a) => a.change24h >= minChange24h.value!)
   }
 
+  // Only favorites
+  if (onlyFavorites.value) {
+    result = result.filter((a) => isFavorite(a.id))
+  }
   // Sorting
   result.sort((a, b) => {
     const key = sortBy.value

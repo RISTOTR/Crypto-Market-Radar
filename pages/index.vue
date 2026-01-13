@@ -35,9 +35,21 @@
 
       <div v-else>
         <div class="overflow-x-auto">
+          <div class="text-[11px] text-slate-400">
+            <span v-if="favorites && favorites.length">
+              You have
+              <span class="text-emerald-300 font-medium">{{ favorites.length }}</span>
+              favorite assets marked.
+            </span>
+            <span v-else>
+              Mark assets with ★ to build your personal watchlist.
+            </span>
+          </div>
+
           <table class="min-w-full text-left text-xs">
             <thead class="border-b border-white/10 text-[10px] uppercase tracking-wide text-slate-400">
               <tr>
+                <th class="py-2 pr-2 text-center w-6">★</th>
                 <th class="py-2 pr-3">#</th>
                 <th class="py-2 pr-3">Asset</th>
                 <th class="py-2 pr-3">Price</th>
@@ -48,11 +60,18 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="asset in limitedAssets"
-                :key="asset.id"
-                class="border-b border-white/5 hover:bg-white/5"
-              >
+              <tr v-for="asset in limitedAssets" :key="asset.id" class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-2 text-center text-[11px]">
+                  <button type="button" class="transition" @click.stop="toggleFavorite(asset.id)">
+                    <span v-if="isFavorite(asset.id)" class="text-emerald-300">
+                      ★
+                    </span>
+                    <span v-else class="text-slate-500 hover:text-slate-300">
+                      ☆
+                    </span>
+                  </button>
+                </td>
+
                 <td class="py-2 pr-3 text-[11px] text-slate-400">
                   {{ asset.rank }}
                 </td>
@@ -67,16 +86,10 @@
                 <td class="py-2 pr-3 text-[11px]">
                   {{ formatCurrency(asset.price) }}
                 </td>
-                <td
-                  class="py-2 pr-3 text-[11px]"
-                  :class="changeClass(asset.change24h)"
-                >
+                <td class="py-2 pr-3 text-[11px]" :class="changeClass(asset.change24h)">
                   {{ formatPercent(asset.change24h) }}
                 </td>
-                <td
-                  class="hidden py-2 pr-3 text-[11px] md:table-cell"
-                  :class="changeClass(asset.change7d)"
-                >
+                <td class="hidden py-2 pr-3 text-[11px] md:table-cell" :class="changeClass(asset.change7d)">
                   {{ formatPercent(asset.change7d) }}
                 </td>
                 <td class="hidden py-2 pr-3 text-right text-[11px] sm:table-cell">
@@ -119,6 +132,8 @@ type AssetSummary = {
 const { data, pending, error } = await useFetch<AssetSummary[]>('/api/assets/list', {
   query: { limit: 50 }
 })
+
+const { isFavorite, toggleFavorite } = useFavorites()
 
 const limitedAssets = computed(() => data.value?.slice(0, 25) ?? [])
 const limitedCount = computed(() => limitedAssets.value.length)
